@@ -4,8 +4,6 @@
 브라우저의 `localStorage`에 데이터를 저장하므로 별도의 서버 없이 동작하며,
 새로고침해도 목록이 유지됩니다.
 
-![쇼핑 리스트 미리보기](shopping-list-final.png)
-
 ## ✨ 기능
 
 - ➕ 아이템 추가 (최대 100자)
@@ -42,8 +40,7 @@ cd shopping-list-app
 
 ```
 shopping-list-app/
-├── index.html              # 앱 본체 (HTML + CSS + JS 단일 파일)
-├── shopping-list-final.png # UI 미리보기 스크린샷
+├── index.html   # 앱 본체 (HTML + CSS + JS 단일 파일)
 └── README.md
 ```
 
