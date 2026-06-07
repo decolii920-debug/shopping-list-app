@@ -176,55 +176,90 @@
     </div>
   </div>
 
-  <script>
-    const STORAGE_KEY = "shopping-list";
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://jushsdtdaiwfjzunnfuz.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_4Cwo_w6uLsHUgt5MewufBg_7IE-FlvL";
+    const TABLE = "shopping_item";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const listEl = document.getElementById("list");
     const emptyEl = document.getElementById("empty");
     const formEl = document.getElementById("add-form");
     const inputEl = document.getElementById("new-item");
+    const addBtn = formEl.querySelector("button[type='submit']");
 
-    let items = load();
+    let items = [];
+
+    await load();
     render();
 
-    formEl.addEventListener("submit", (e) => {
+    formEl.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = inputEl.value.trim();
-      inputEl.value = "";
       if (!text) return;
-      items.push({ id: Date.now().toString(), text, checked: false });
-      save();
+      inputEl.value = "";
+      addBtn.disabled = true;
+      const { data, error } = await supabase
+        .from(TABLE)
+        .insert({ text, checked: false })
+        .select()
+        .single();
+      addBtn.disabled = false;
+      if (error) {
+        console.error("insert failed:", error);
+        alert("아이템 추가에 실패했어요: " + error.message);
+        return;
+      }
+      items.push(data);
       render();
       inputEl.focus();
     });
 
-    function load() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (err) {
-        console.warn("localStorage parse failed, starting empty:", err);
-        return [];
+    async function load() {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select("id, text, checked, created_at")
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("load failed:", error);
+        items = [];
+        return;
+      }
+      items = data ?? [];
+    }
+
+    async function toggle(id) {
+      const item = items.find((it) => it.id === id);
+      if (!item) return;
+      const next = !item.checked;
+      item.checked = next;
+      render();
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ checked: next })
+        .eq("id", id);
+      if (error) {
+        console.error("toggle failed:", error);
+        item.checked = !next;
+        render();
+        alert("상태 변경에 실패했어요: " + error.message);
       }
     }
 
-    function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }
-
-    function toggle(id) {
-      const item = items.find((it) => it.id === id);
-      if (!item) return;
-      item.checked = !item.checked;
-      save();
-      render();
-    }
-
-    function remove(id) {
+    async function remove(id) {
+      const prev = items;
       items = items.filter((it) => it.id !== id);
-      save();
       render();
+      const { error } = await supabase.from(TABLE).delete().eq("id", id);
+      if (error) {
+        console.error("delete failed:", error);
+        items = prev;
+        render();
+        alert("삭제에 실패했어요: " + error.message);
+      }
     }
 
     function render() {
