@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>쇼핑 리스트</title>
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #6e7681;
+      --border: #d0d7de;
+      --accent: #2da44e;
+      --accent-hover: #2c974b;
+      --danger: #cf222e;
+      --danger-hover: #a40e26;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+                   "Malgun Gothic", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 32px 16px 64px;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      margin: 0 0 24px;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    .input-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45, 164, 78, 0.2);
+    }
+
+    .input-row button {
+      padding: 0 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .input-row button:hover { background: var(--accent-hover); }
+    .input-row button:active { transform: translateY(1px); }
+
+    ul.list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    li.item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    li.item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    li.item .text {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    li.item.checked .text {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    li.item .delete {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    li.item .delete:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: rgba(207, 34, 46, 0.05);
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px 0;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 쇼핑 리스트</h1>
+
+    <div class="card">
+      <form class="input-row" id="add-form" autocomplete="off">
+        <input
+          type="text"
+          id="new-item"
+          placeholder="예: 우유, 빵, 계란..."
+          aria-label="추가할 아이템"
+          maxlength="100"
+        />
+        <button type="submit">추가</button>
+      </form>
+
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="empty" hidden>장바구니가 비었어요</p>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "shopping-list";
+    const listEl = document.getElementById("list");
+    const emptyEl = document.getElementById("empty");
+    const formEl = document.getElementById("add-form");
+    const inputEl = document.getElementById("new-item");
+
+    let items = load();
+    render();
+
+    formEl.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = inputEl.value.trim();
+      inputEl.value = "";
+      if (!text) return;
+      items.push({ id: Date.now().toString(), text, checked: false });
+      save();
+      render();
+      inputEl.focus();
+    });
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.warn("localStorage parse failed, starting empty:", err);
+        return [];
+      }
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function toggle(id) {
+      const item = items.find((it) => it.id === id);
+      if (!item) return;
+      item.checked = !item.checked;
+      save();
+      render();
+    }
+
+    function remove(id) {
+      items = items.filter((it) => it.id !== id);
+      save();
+      render();
+    }
+
+    function render() {
+      listEl.innerHTML = "";
+      if (items.length === 0) {
+        emptyEl.hidden = false;
+        return;
+      }
+      emptyEl.hidden = true;
+
+      for (const item of items) {
+        const li = document.createElement("li");
+        li.className = "item" + (item.checked ? " checked" : "");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = item.checked;
+        checkbox.setAttribute("aria-label", "완료 토글");
+        checkbox.addEventListener("change", () => toggle(item.id));
+
+        const text = document.createElement("span");
+        text.className = "text";
+        text.textContent = item.text;
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "delete";
+        del.setAttribute("aria-label", "삭제");
+        del.textContent = "✕";
+        del.addEventListener("click", () => remove(item.id));
+
+        li.append(checkbox, text, del);
+        listEl.appendChild(li);
+      }
+    }
+  </script>
+</body>
+</html>
